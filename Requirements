@@ -8,3 +8,4 @@ langchain-core==0.1.0
 faiss-cpu==1.7.4
 tensorflow==2.15.0
 tensorflow-hub==0.15.0
+dotenv
