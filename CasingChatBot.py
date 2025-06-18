@@ -67,7 +67,7 @@ def main():
                      template="You are doing a mock casing interview for college students that are beginners. The text in --are cases that you have done yourself."+"--"+text+"--"+additional_instructions+"After each user input, are to tell the user if they provided a correct answer or not. You will try to get to the correct solution yourself.Then check the relevant part for the solution which is between dashes. The text between dashes is the solution to solving the student's question--"+relevant_info+"--If a student says they are struggling help a student. Chat history:{chat_history} User question:{user_question}"
 
                      prompt=ChatPromptTemplate.from_template(template)
-                     llm=ChatGroq(model="llama3-8b-8192",temperature=0,max_tokens=None, timeout=None,max_retries=2,api_key="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")
+                     llm=ChatGroq(model="llama3-8b-8192",temperature=0,max_tokens=None, timeout=None,max_retries=2,api_key="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")
                      chain=prompt | llm | StrOutputParser()
                      return chain.invoke({"chat_history":chat_history, "user_question":query})
         #api_key=os.environ.get('GROQ_API_KEY')
