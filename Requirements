@@ -1,9 +1,6 @@
-streamlit==1.29.0
-PyPDF2==3.0.1
-langchain==0.1.0
-langchain-community==0.0.10
-langchain-groq==0.0.1
-langchain-core==0.1.0
-faiss-cpu==1.7.4
-tensorflow==2.15.0
-tensorflow-hub==0.15.0
+langchain==0.3.26
+langchain_community==0.3.27
+langchain_core==0.3.68
+langchain_groq==0.3.5
+PyPDF==5.7.0
+streamlit==1.46.1
