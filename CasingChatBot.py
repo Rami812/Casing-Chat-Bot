@@ -1,5 +1,5 @@
 import streamlit as st
-from pypdf import PdfReader
+import fitz
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import LlamaCppEmbeddings
 from langchain.vectorstores import FAISS
@@ -37,6 +37,8 @@ def main():
     pdf=st.file_uploader("Upload your PDF",type="pdf")
     #extract the text
     if pdf is not None:
+        pdf_byptes=pdf.read()
+        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
         pdf_reader=PdfReader(pdf)
         text=""
         for page in pdf_reader.pages:
