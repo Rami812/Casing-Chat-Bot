@@ -1,5 +1,6 @@
 import streamlit as st
-import fitz
+from pdfminer.high_level import extract_text
+import io
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import LlamaCppEmbeddings
 from langchain.vectorstores import FAISS
@@ -37,13 +38,10 @@ def main():
     pdf=st.file_uploader("Upload your PDF",type="pdf")
     #extract the text
     if pdf is not None:
-        pdf_byptes=pdf.read()
-        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
-        pdf_reader=PdfReader(pdf)
-        text=""
-        for page in pdf_reader.pages:
-            text+=page.extract_text()
-        #st.write(text)
+        # Convert uploaded file to bytes
+        pdf_bytes = pdf.read()
+        # Use pdfminer to extract text
+        text = extract_text(io.BytesIO(pdf_bytes))
         #split the pdf text into chunks
         text_splitter= CharacterTextSplitter(
             separator="\n", chunk_size=1000, chunk_overlap=200, length_function=len
