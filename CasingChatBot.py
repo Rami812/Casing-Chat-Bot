@@ -1,6 +1,5 @@
 import streamlit as st
-import PyPDF
-from PyPDF import PdfReader
+from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import LlamaCppEmbeddings
 from langchain.vectorstores import FAISS
@@ -31,7 +30,6 @@ history = StreamlitChatMessageHistory(key="chat_messages")
 
 
 def main():
-    load_dotenv()
 
     st.set_page_config(page_title="Give me a case to interview you")
     st.header("Ask your PDF")
