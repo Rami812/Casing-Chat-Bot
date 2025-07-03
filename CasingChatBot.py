@@ -1,5 +1,5 @@
 import streamlit as st
-from pypdf import PdfReader
+from pypdf2 import PdfReader
 import io
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import LlamaCppEmbeddings
