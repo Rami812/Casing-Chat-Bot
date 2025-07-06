@@ -6,7 +6,7 @@ import pickle
 import requests
 from datetime import datetime
 import tempfile
-import PyPDF2
+import PyPDF
 from io import BytesIO
 import numpy as np
 from sentence_transformers import SentenceTransformer
