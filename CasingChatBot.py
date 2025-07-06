@@ -6,7 +6,7 @@ import pickle
 import requests
 from datetime import datetime
 import tempfile
-import PyPDF
+import pypdf
 from io import BytesIO
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -97,7 +97,7 @@ class PDFProcessor:
     def extract_text_from_pdf(self, pdf_content: bytes) -> str:
         """Extract text from PDF content"""
         try:
-            pdf_reader = PyPDF2.PdfReader(BytesIO(pdf_content))
+            pdf_reader = pypdf.PdfReader(BytesIO(pdf_content))
             text = ""
             for page in pdf_reader.pages:
                 text += page.extract_text() + "\n"
