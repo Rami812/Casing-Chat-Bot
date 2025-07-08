@@ -19,8 +19,7 @@ crewai
 
 # Google Gemini API
 
-google-generativeai
-
+langchain_google_genai
 
 # Other required packages
 tqdm
