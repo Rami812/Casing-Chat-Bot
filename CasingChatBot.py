@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from langchain_google_genai import GoogleGenerativeAI as genai
+#import google.generativeai as genai
 import streamlit as st
 from pdfminer.high_level import extract_text
 import io
