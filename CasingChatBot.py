@@ -1,5 +1,3 @@
-from langchain_google_genai import GoogleGenerativeAI as genai
-#import google.generativeai as genai
 import streamlit as st
 from pdfminer.high_level import extract_text
 import io
@@ -14,6 +12,10 @@ from crewai import Agent, Task, Crew, Process,LLM
 from crewai.tools import tool
 from typing import List, Dict, Any
 import json
+
+#from langchain_google_genai import GoogleGenerativeAI as genai
+#import google.generativeai as genai
+#from langchain_groq import ChatGroq
 
 # Initialize the LLM for CrewAI agents
 def get_llm():
