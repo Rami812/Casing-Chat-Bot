@@ -19,7 +19,7 @@ crewai
 
 # Google Gemini API
 
-google-generativeai==0.7.2
+google-generativeai
 
 
 # Other required packages
