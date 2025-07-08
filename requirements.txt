@@ -1,26 +1,9 @@
-# Web framework
-streamlit
-
-# PDF extraction
-pdfminer.six
-
-# LangChain ecosystem
-langchain
-langchain-core
-langchain-community
-
-# Vector store and embeddings
-faiss-cpu
-tensorflow  # For TensorflowHubEmbeddings
-tensorflow-hub
-
-# CrewAI
-crewai
-
-# Google Gemini API
-
-langchain_google_genai
-
-# Other required packages
-tqdm
-numpy
+crewai==0.140.0
+langchain==0.3.26
+langchain_community==0.3.27
+langchain_core==0.3.68
+langchain_google_genai==2.1.6
+langchain_groq==0.3.5
+pdfminer==20191125
+pdfminer_six==20250506
+streamlit==1.46.1
