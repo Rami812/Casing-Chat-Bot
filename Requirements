@@ -18,7 +18,9 @@ tensorflow-hub
 crewai
 
 # Google Gemini API
+google
 google-generativeai
+
 
 # Other required packages
 tqdm
