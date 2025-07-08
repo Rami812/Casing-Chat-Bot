@@ -18,8 +18,8 @@ tensorflow-hub
 crewai
 
 # Google Gemini API
-google
-google-generativeai
+
+google.generativeai
 
 
 # Other required packages
