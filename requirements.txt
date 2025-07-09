@@ -8,4 +8,5 @@ langchain_groq==0.3.5
 pdfminer_six==20250506
 streamlit==1.46.1
 tensorflow-hub==0.16.1
+tensorflow
 
