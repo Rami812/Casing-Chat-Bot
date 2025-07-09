@@ -7,3 +7,4 @@ langchain_google_genai==2.1.6
 langchain_groq==0.3.5
 pdfminer_six==20250506
 streamlit==1.46.1
+tensorflow-hub
