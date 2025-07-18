@@ -1,7 +1,5 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-import streamlit as st
+import os
+import chainlit as cl
 from pdfminer.high_level import extract_text
 import io
 from langchain.text_splitter import CharacterTextSplitter
@@ -10,29 +8,34 @@ from langchain.vectorstores import FAISS
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
-import os
-from crewai import Agent, Task, Crew, Process,LLM
+from crewai import Agent, Task, Crew, Process, LLM
 from crewai.tools import tool
 from typing import List, Dict, Any
 import json
-
-#from langchain_google_genai import GoogleGenerativeAI as genai
-#import google.generativeai as genai
-#from langchain_groq import ChatGroq
+import asyncio
 
 # Initialize the LLM for CrewAI agents
 def get_llm():
-  my_llm=LLM(api_key="AIzaSyDmLDKKNDS8J6J_lCIKG7VjXvMCw4vpUgs",
-  model="gemini/gemini-1.5-flash")
-  return my_llm
+    # Use environment variable instead of hardcoded API key
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("GOOGLE_API_KEY environment variable not set")
+    
+    my_llm = LLM(
+        api_key=api_key,
+        model="gemini/gemini-1.5-flash"
+    )
+    return my_llm
 
+# Global knowledge base storage
+knowledge_base = None
 
 # Custom tool for knowledge base search
 @tool
 def search_case_knowledge(query: str) -> str:
     """Search the uploaded case document for relevant information."""
-    if 'knowledge_base' in st.session_state:
-        docs = st.session_state.knowledge_base.similarity_search(query, k=3)
+    if knowledge_base is not None:
+        docs = knowledge_base.similarity_search(query, k=3)
         return "\n".join([doc.page_content for doc in docs])
     return "No knowledge base available"
 
@@ -40,12 +43,15 @@ def search_case_knowledge(query: str) -> str:
 @tool
 def get_current_stage() -> str:
     """Get the current stage of the case interview."""
-    return st.session_state.get('current_stage', 'case_introduction')
+    user_session = cl.user_session.get("user_session", {})
+    return user_session.get('current_stage', 'case_introduction')
 
 @tool
 def update_stage(new_stage: str) -> str:
     """Update the current stage of the case interview."""
-    st.session_state['current_stage'] = new_stage
+    user_session = cl.user_session.get("user_session", {})
+    user_session['current_stage'] = new_stage
+    cl.user_session.set("user_session", user_session)
     return f"Stage updated to: {new_stage}"
 
 class CaseInterviewCrew:
@@ -216,33 +222,39 @@ class CaseInterviewCrew:
     
     def run_appropriate_task(self, user_input: str, chat_history: List) -> str:
         """Determine which task to run based on current stage and user input."""
-        current_stage = st.session_state.get('current_stage', 'case_introduction')
+        user_session = cl.user_session.get("user_session", {})
+        current_stage = user_session.get('current_stage', 'case_introduction')
         
         # Determine the appropriate task based on stage and input analysis
         if current_stage == 'case_introduction':
             if 'framework' in user_input.lower() or 'approach' in user_input.lower():
-                st.session_state['current_stage'] = 'framework_evaluation'
+                user_session['current_stage'] = 'framework_evaluation'
+                cl.user_session.set("user_session", user_session)
                 task = self._create_framework_evaluation_task()
             elif any(question_word in user_input.lower() for question_word in ['who', 'what', 'where', 'when', 'why', 'how']):
-                st.session_state['current_stage'] = 'clarifying_questions'
+                user_session['current_stage'] = 'clarifying_questions'
+                cl.user_session.set("user_session", user_session)
                 task = self._create_clarifying_questions_task()
             else:
                 task = self._create_case_introduction_task()
         elif current_stage == 'clarifying_questions':
             if 'framework' in user_input.lower() or 'approach' in user_input.lower():
-                st.session_state['current_stage'] = 'framework_evaluation'
+                user_session['current_stage'] = 'framework_evaluation'
+                cl.user_session.set("user_session", user_session)
                 task = self._create_framework_evaluation_task()
             else:
                 task = self._create_clarifying_questions_task()
         elif current_stage == 'framework_evaluation':
             if any(calc_word in user_input.lower() for calc_word in ['calculate', 'math', 'number', '$', '%']):
-                st.session_state['current_stage'] = 'math_evaluation'
+                user_session['current_stage'] = 'math_evaluation'
+                cl.user_session.set("user_session", user_session)
                 task = self._create_math_evaluation_task()
             else:
                 task = self._create_framework_evaluation_task()
         elif current_stage == 'math_evaluation':
             if any(rec_word in user_input.lower() for rec_word in ['recommend', 'suggestion', 'conclusion', 'summary']):
-                st.session_state['current_stage'] = 'recommendation_evaluation'
+                user_session['current_stage'] = 'recommendation_evaluation'
+                cl.user_session.set("user_session", user_session)
                 task = self._create_recommendation_evaluation_task()
             else:
                 task = self._create_math_evaluation_task()
@@ -264,129 +276,171 @@ class CaseInterviewCrew:
         result = crew.kickoff()
         return result
 
-def main():
-    st.set_page_config(page_title="CrewAI Case Interview Preparation", layout="wide")
-    st.header("🎯 AI-Powered Case Interview Practice")
-    st.subheader("Multi-Agent System for Comprehensive Case Preparation")
-    
-    # Initialize session state
-    if 'crew' not in st.session_state:
-        st.session_state.crew = None
-    if 'current_stage' not in st.session_state:
-        st.session_state.current_stage = 'case_introduction'
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = [
-            AIMessage(content="Hello! I'm your AI case interview coach powered by a team of expert consultants. Please upload a case study PDF to begin your practice session.")
-        ]
-    
-    # Sidebar for case upload and stage tracking
-    with st.sidebar:
-        st.header("📄 Case Upload")
-        pdf = st.file_uploader("Upload your case study PDF", type="pdf")
-        
-        if pdf is not None:
-            with st.spinner("Processing case document..."):
-                # Extract text from PDF
-                pdf_bytes = pdf.read()
-                text = extract_text(io.BytesIO(pdf_bytes))
-                
-                # Split text into chunks
-                text_splitter = CharacterTextSplitter(
-                    separator="\n",
-                    chunk_size=1000,
-                    chunk_overlap=200,
-                    length_function=len
-                )
-                chunks = text_splitter.split_text(text)
-                
-                # Create embeddings and knowledge base
-                embeddings = TensorflowHubEmbeddings()
-                st.session_state.knowledge_base = FAISS.from_texts(chunks, embeddings)
-                
-                # Initialize CrewAI system
-                st.session_state.crew = CaseInterviewCrew()
-                
-                st.success("✅ Case document processed successfully!")
-                st.info("You can now start your case interview practice.")
-        
-        # Display current stage
-        st.header("🎯 Current Stage")
-        stage_display = {
-            'case_introduction': '1. Case Introduction',
-            'clarifying_questions': '2. Clarifying Questions',
-            'framework_evaluation': '3. Framework Development',
-            'math_evaluation': '4. Quantitative Analysis',
-            'recommendation_evaluation': '5. Recommendations'
-        }
-        current_stage = st.session_state.get('current_stage', 'case_introduction')
-        st.write(f"**{stage_display.get(current_stage, 'Unknown')}**")
-        
-        # Stage descriptions
-        st.header("📋 Interview Stages")
-        with st.expander("Stage Guide"):
-            st.markdown("""
-            **1. Case Introduction**: Listen to the case and ask clarifying questions
-            **2. Clarifying Questions**: Ask strategic, framework-oriented questions
-            **3. Framework Development**: Create a MECE framework with 3+ factors
-            **4. Quantitative Analysis**: Perform calculations with proper technique
-            **5. Recommendations**: Provide executive summary with next steps
-            """)
-    
-    # Main chat interface
-    st.header("💬 Case Interview Session")
-    
-    # Display chat history
-    for message in st.session_state.chat_history:
-        if isinstance(message, HumanMessage):
-            with st.chat_message("user"):
-                st.markdown(message.content)
-        else:
-            with st.chat_message("assistant"):
-                st.markdown(message.content)
-    
-    # User input
-    user_input = st.chat_input("Type your response, questions, or request guidance...")
-    
-    if user_input and st.session_state.crew:
-        # Add user message to history
-        st.session_state.chat_history.append(HumanMessage(content=user_input))
-        
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(user_input)
-        
-        # Process with CrewAI
-        with st.chat_message("assistant"):
-            with st.spinner("Consulting with expert agents..."):
-                try:
-                    response = st.session_state.crew.run_appropriate_task(
-                        user_input, 
-                        st.session_state.chat_history
-                    )
-                    st.markdown(response)
-                    
-                    # Add AI response to history
-                    st.session_state.chat_history.append(AIMessage(content=response.raw))
-                    
-                except Exception as e:
-                    error_msg = f"I encountered an error while processing your request: {str(e)}"
-                    st.error(error_msg)
-                    st.session_state.chat_history.append(AIMessage(content=error_msg))
-    
-    elif user_input and not st.session_state.crew:
-        st.warning("Please upload a case study PDF first to begin the interview.")
-    
-    # Footer with tips
-    with st.expander("💡 Tips for Success"):
-        st.markdown("""
-        **Clarifying Questions**: Focus on understanding the business, not specific numbers
-        **Framework**: Use MECE principles - Mutually Exclusive, Collectively Exhaustive
-        **Math**: Show your work step-by-step and use proper rounding techniques
-        **Recommendations**: Speak as if presenting to a CEO - professional and actionable
-        """)
+# Initialize global crew
+crew = None
 
-if __name__ == '__main__':
-  main()
-  __import__('pysqlite3')
-  import sys
-  sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+@cl.on_chat_start
+async def start():
+    """Initialize the chat session when a user connects."""
+    global crew, knowledge_base
+    
+    # Initialize user session
+    cl.user_session.set("user_session", {"current_stage": "case_introduction"})
+    
+    # Send welcome message with file upload request
+    await cl.Message(
+        content="""# 🎯 Welcome to AI-Powered Case Interview Practice!
+
+I'm your AI case interview coach powered by a team of expert consultants. 
+
+To begin your practice session, please upload a case study PDF using the attachment button below. 
+
+Once uploaded, I'll process the document and we can start your interview!
+
+## 📋 Interview Stages Guide:
+- **Stage 1**: Case Introduction - Listen and ask clarifying questions
+- **Stage 2**: Framework Development - Create a MECE framework  
+- **Stage 3**: Quantitative Analysis - Perform calculations
+- **Stage 4**: Recommendations - Provide executive summary
+
+## 💡 Tips for Success:
+- **Clarifying Questions**: Focus on business context, not specific numbers
+- **Framework**: Use MECE principles (Mutually Exclusive, Collectively Exhaustive)
+- **Math**: Show your work step-by-step with proper rounding
+- **Recommendations**: Speak as if presenting to a CEO
+
+Upload your case study when you're ready to begin! 📄"""
+    ).send()
+    
+    # Wait for file upload
+    files = None
+    while files is None:
+        files = await cl.AskFileMessage(
+            content="Please upload your case study PDF to begin the interview session:",
+            accept=["application/pdf"],
+            max_size_mb=20,
+            timeout=300
+        ).send()
+    
+    if files:
+        await process_uploaded_file(files[0])
+
+async def process_uploaded_file(file):
+    """Process the uploaded PDF file and initialize the knowledge base."""
+    global crew, knowledge_base
+    
+    # Show processing message
+    processing_msg = cl.Message(content="🔄 Processing your case study PDF...")
+    await processing_msg.send()
+    
+    try:
+        # Extract text from PDF
+        pdf_bytes = file.content
+        text = extract_text(io.BytesIO(pdf_bytes))
+        
+        # Update processing message
+        processing_msg.content = "📝 Extracting text and creating knowledge base..."
+        await processing_msg.update()
+        
+        # Split text into chunks
+        text_splitter = CharacterTextSplitter(
+            separator="\n",
+            chunk_size=1000,
+            chunk_overlap=200,
+            length_function=len
+        )
+        chunks = text_splitter.split_text(text)
+        
+        # Create embeddings and knowledge base
+        embeddings = TensorflowHubEmbeddings()
+        knowledge_base = FAISS.from_texts(chunks, embeddings)
+        
+        # Initialize CrewAI system
+        crew = CaseInterviewCrew()
+        
+        # Update processing message to success
+        processing_msg.content = f"✅ **Case study '{file.name}' processed successfully!**\n\nYour interview session is now ready. Let's begin with the case introduction!"
+        await processing_msg.update()
+        
+        # Get current stage info
+        user_session = cl.user_session.get("user_session", {})
+        current_stage = user_session.get('current_stage', 'case_introduction')
+        
+        # Send stage indicator
+        await cl.Message(
+            content=f"🎯 **Current Stage**: Stage 1 - Case Introduction\n\nI'm now ready to present your case study. Type 'start' or 'begin' to receive the case prompt, or ask me any questions about the process."
+        ).send()
+        
+    except Exception as e:
+        # Handle processing errors
+        processing_msg.content = f"❌ **Error processing PDF**: {str(e)}\n\nPlease try uploading the file again or contact support if the issue persists."
+        await processing_msg.update()
+
+@cl.on_message
+async def main(message: cl.Message):
+    """Handle incoming messages from users."""
+    global crew, knowledge_base
+    
+    if crew is None or knowledge_base is None:
+        await cl.Message(
+            content="⚠️ **Please upload a case study PDF first!**\n\nUse the attachment button to upload your PDF file before we can begin the interview."
+        ).send()
+        return
+    
+    # Show typing indicator
+    async with cl.Step(name="Consulting with expert agents", type="run") as step:
+        try:
+            # Get chat history
+            chat_history = cl.chat_context.to_openai()
+            
+            # Process with CrewAI
+            response = crew.run_appropriate_task(message.content, chat_history)
+            
+            # Get current stage for display
+            user_session = cl.user_session.get("user_session", {})
+            current_stage = user_session.get('current_stage', 'case_introduction')
+            
+            stage_names = {
+                'case_introduction': 'Stage 1 - Case Introduction',
+                'clarifying_questions': 'Stage 2 - Clarifying Questions',
+                'framework_evaluation': 'Stage 3 - Framework Development',
+                'math_evaluation': 'Stage 4 - Quantitative Analysis',
+                'recommendation_evaluation': 'Stage 5 - Recommendations'
+            }
+            
+            stage_display = stage_names.get(current_stage, 'Unknown Stage')
+            
+            # Format response with stage information
+            formatted_response = f"🎯 **{stage_display}**\n\n{response.raw}"
+            
+            step.output = formatted_response
+            
+        except Exception as e:
+            error_msg = f"❌ **Error processing your request**: {str(e)}\n\nPlease try rephrasing your question or contact support if the issue persists."
+            step.output = error_msg
+
+@cl.on_stop
+async def on_stop():
+    """Clean up when the chat session ends."""
+    global crew, knowledge_base
+    crew = None
+    knowledge_base = None
+    print("Chat session ended and resources cleaned up.")
+
+# Configuration for Chainlit
+@cl.cache
+def get_app_config():
+    return {
+        "name": "AI Case Interview Coach",
+        "description": "Multi-agent system for comprehensive case interview preparation",
+        "author": "AI Case Interview Team",
+        "version": "1.0.0"
+    }
+
+if __name__ == "__main__":
+    # Use production settings
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8000))
+    
+    # Run the Chainlit app with production settings
+    cl.run(debug=False, host=host, port=port)
