@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Case Interview Coach</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+        }
+        .typing-indicator {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .stage-progress {
+            background: linear-gradient(90deg, #3B82F6 0%, #8B5CF6 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-brain text-blue-600 text-2xl mr-3"></i>
+                        <h1 class="text-2xl font-bold text-gray-900">AI Case Interview Coach</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div id="connectionStatus" class="flex items-center">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full mr-2"></div>
+                            <span class="text-sm text-gray-600">Connecting...</span>
+                        </div>
+                        <button id="newSessionBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-plus mr-2"></i>New Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Sidebar -->
+                <div class="lg:col-span-1">
+                    <!-- Stage Progress -->
+                    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Interview Progress</h3>
+                        <div id="stageProgress" class="space-y-3">
+                            <div class="stage-item flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center mr-3">1</div>
+                                <span class="text-sm font-medium">Case Introduction</span>
+                            </div>
+                            <div class="stage-item flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 text-sm flex items-center justify-center mr-3">2</div>
+                                <span class="text-sm">Clarifying Questions</span>
+                            </div>
+                            <div class="stage-item flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 text-sm flex items-center justify-center mr-3">3</div>
+                                <span class="text-sm">Framework Development</span>
+                            </div>
+                            <div class="stage-item flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 text-sm flex items-center justify-center mr-3">4</div>
+                                <span class="text-sm">Quantitative Analysis</span>
+                            </div>
+                            <div class="stage-item flex items-center opacity-50">
+                                <div class="w-8 h-8 rounded-full bg-gray-300 text-gray-600 text-sm flex items-center justify-center mr-3">5</div>
+                                <span class="text-sm">Recommendations</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Session Info -->
+                    <div class="bg-white rounded-lg shadow-sm p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Session Info</h3>
+                        <div class="space-y-3 text-sm">
+                            <div>
+                                <span class="text-gray-600">Session ID:</span>
+                                <p id="sessionId" class="font-mono text-xs bg-gray-100 p-2 rounded mt-1">Not connected</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Case Study:</span>
+                                <p id="caseFileName" class="text-gray-800 mt-1">Not uploaded</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Messages:</span>
+                                <p id="messageCount" class="text-gray-800 mt-1">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Area -->
+                <div class="lg:col-span-3">
+                    <!-- Welcome/Upload Area -->
+                    <div id="welcomeArea" class="bg-white rounded-lg shadow-sm p-8 text-center">
+                        <i class="fas fa-upload text-4xl text-blue-600 mb-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to AI Case Interview Practice!</h2>
+                        <p class="text-gray-600 mb-6 max-w-2xl mx-auto">
+                            Upload a case study PDF to begin your interview session. Our AI coaches will guide you through 
+                            each stage of the case interview process with expert feedback.
+                        </p>
+                        
+                        <div class="max-w-md mx-auto">
+                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors cursor-pointer" id="uploadArea">
+                                <input type="file" id="fileInput" accept=".pdf" class="hidden">
+                                <i class="fas fa-file-pdf text-3xl text-gray-400 mb-3"></i>
+                                <p class="text-gray-600">Click to upload your case study PDF</p>
+                                <p class="text-sm text-gray-500 mt-2">Maximum file size: 20MB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Interface -->
+                    <div id="chatInterface" class="hidden">
+                        <!-- Chat Messages -->
+                        <div class="bg-white rounded-lg shadow-sm mb-4">
+                            <div class="chat-container overflow-y-auto p-6" id="chatMessages">
+                                <!-- Messages will be added here dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Message Input -->
+                        <div class="bg-white rounded-lg shadow-sm p-4">
+                            <div class="flex space-x-4">
+                                <div class="flex-1">
+                                    <textarea
+                                        id="messageInput"
+                                        placeholder="Type your message here... (Press Ctrl+Enter to send)"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                        rows="3"
+                                    ></textarea>
+                                </div>
+                                <div class="flex flex-col justify-end">
+                                    <button
+                                        id="sendBtn"
+                                        class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled
+                                    >
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="typingIndicator" class="hidden flex items-center mt-2 text-sm text-gray-500">
+                                <div class="typing-indicator">AI is thinking...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-sm mx-4">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Processing...</h3>
+                <p id="loadingText" class="text-gray-600">Please wait while we process your request.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        let sessionId = null;
+        let websocket = null;
+        let messageCount = 0;
+        let currentStage = 'case_introduction';
+
+        // API base URL
+        const API_BASE = window.location.origin + '/api';
+        const WS_BASE = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`;
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+            createNewSession();
+        });
+
+        function initializeEventListeners() {
+            // File upload
+            document.getElementById('uploadArea').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+
+            document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+            // Message sending
+            document.getElementById('sendBtn').addEventListener('click', sendMessage);
+            document.getElementById('messageInput').addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+
+            // New session
+            document.getElementById('newSessionBtn').addEventListener('click', createNewSession);
+        }
+
+        async function createNewSession() {
+            try {
+                showLoading('Creating new session...');
+                
+                const response = await axios.post(`${API_BASE}/auth/guest-session`);
+                sessionId = response.data.session_id;
+                
+                document.getElementById('sessionId').textContent = sessionId;
+                updateConnectionStatus('connected', 'Connected');
+                
+                // Initialize WebSocket
+                initializeWebSocket();
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Failed to create session:', error);
+                updateConnectionStatus('error', 'Connection failed');
+                hideLoading();
+            }
+        }
+
+        function initializeWebSocket() {
+            if (websocket) {
+                websocket.close();
+            }
+
+            websocket = new WebSocket(`${WS_BASE}/chat/${sessionId}`);
+
+            websocket.onopen = function() {
+                updateConnectionStatus('connected', 'Connected');
+            };
+
+            websocket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+
+            websocket.onclose = function() {
+                updateConnectionStatus('disconnected', 'Disconnected');
+                setTimeout(() => {
+                    if (sessionId) {
+                        initializeWebSocket();
+                    }
+                }, 5000);
+            };
+
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus('error', 'Connection error');
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'response':
+                    addMessage('assistant', data.content, data.stage_display);
+                    hideTypingIndicator();
+                    updateStage(data.stage);
+                    break;
+                case 'connection_established':
+                    console.log('WebSocket connection established');
+                    break;
+                case 'ping':
+                    websocket.send(JSON.stringify({ type: 'pong' }));
+                    break;
+                case 'error':
+                    addMessage('system', `Error: ${data.message}`, 'System');
+                    hideTypingIndicator();
+                    break;
+            }
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                alert('Please select a PDF file.');
+                return;
+            }
+
+            if (file.size > 20 * 1024 * 1024) { // 20MB
+                alert('File size must be less than 20MB.');
+                return;
+            }
+
+            try {
+                showLoading('Processing your case study...');
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await axios.post(`${API_BASE}/case/session/${sessionId}/upload`, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+
+                if (response.data.success) {
+                    document.getElementById('caseFileName').textContent = file.name;
+                    document.getElementById('welcomeArea').classList.add('hidden');
+                    document.getElementById('chatInterface').classList.remove('hidden');
+                    document.getElementById('sendBtn').disabled = false;
+                    
+                    addMessage('system', 
+                        `✅ Case study "${file.name}" uploaded successfully! You can now start your interview. Type "start" or "begin" to receive the case prompt.`, 
+                        'System'
+                    );
+                } else {
+                    alert('Failed to upload file: ' + response.data.message);
+                }
+
+                hideLoading();
+            } catch (error) {
+                console.error('Upload failed:', error);
+                alert('Upload failed. Please try again.');
+                hideLoading();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !websocket) return;
+
+            // Add user message to chat
+            addMessage('user', message);
+            
+            // Send via WebSocket
+            websocket.send(JSON.stringify({
+                type: 'message',
+                content: message
+            }));
+
+            // Clear input and show typing indicator
+            input.value = '';
+            showTypingIndicator();
+            messageCount++;
+            document.getElementById('messageCount').textContent = messageCount;
+        }
+
+        function addMessage(role, content, stage = null) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `mb-4 ${role === 'user' ? 'text-right' : 'text-left'}`;
+
+            const isSystem = role === 'system';
+            const bgColor = role === 'user' ? 'bg-blue-600 text-white' : 
+                           isSystem ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' : 
+                           'bg-gray-100 text-gray-800';
+
+            messageDiv.innerHTML = `
+                <div class="inline-block max-w-3xl">
+                    ${stage && !isSystem ? `<div class="text-xs text-gray-500 mb-1">${stage}</div>` : ''}
+                    <div class="px-4 py-3 rounded-lg ${bgColor}">
+                        <div class="whitespace-pre-wrap">${content}</div>
+                        <div class="text-xs mt-2 opacity-75">
+                            ${new Date().toLocaleTimeString()}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typingIndicator').classList.remove('hidden');
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').classList.add('hidden');
+        }
+
+        function updateConnectionStatus(status, text) {
+            const statusEl = document.getElementById('connectionStatus');
+            const dot = statusEl.querySelector('div');
+            const span = statusEl.querySelector('span');
+
+            const colors = {
+                connected: 'bg-green-400',
+                connecting: 'bg-yellow-400',
+                disconnected: 'bg-red-400',
+                error: 'bg-red-500'
+            };
+
+            dot.className = `w-2 h-2 rounded-full mr-2 ${colors[status] || 'bg-gray-400'}`;
+            span.textContent = text;
+        }
+
+        function updateStage(stage) {
+            if (!stage) return;
+            
+            currentStage = stage;
+            const stageNumbers = {
+                'case_introduction': 1,
+                'clarifying_questions': 2,
+                'framework_evaluation': 3,
+                'math_evaluation': 4,
+                'recommendation_evaluation': 5
+            };
+
+            const stageItems = document.querySelectorAll('.stage-item');
+            stageItems.forEach((item, index) => {
+                const stageNum = stageNumbers[stage];
+                if (index + 1 <= stageNum) {
+                    item.classList.remove('opacity-50');
+                    const circle = item.querySelector('div');
+                    circle.className = 'w-8 h-8 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center mr-3';
+                } else {
+                    item.classList.add('opacity-50');
+                    const circle = item.querySelector('div');
+                    circle.className = 'w-8 h-8 rounded-full bg-gray-300 text-gray-600 text-sm flex items-center justify-center mr-3';
+                }
+            });
+        }
+
+        function showLoading(text = 'Processing...') {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingModal').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
