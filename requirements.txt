@@ -1,3 +1,8 @@
+# Core Flask dependencies
+flask==3.0.0
+werkzeug==3.0.1
+
+# Original AI and ML dependencies
 chainlit==1.0.0
 pdfminer.six==20220524
 langchain==0.1.0
@@ -6,4 +11,22 @@ langchain-groq==0.0.3
 tensorflow-hub==0.15.0
 faiss-cpu==1.7.4
 crewai==0.22.5
+
+# Cloud storage and vector database
+pinecone-client==3.0.0
+
+# Additional Flask utilities
+flask-session==0.5.0
+gunicorn==21.2.0
+
+# Database support (if needed for sessions)
 pysqlite3-binary==0.5.2
+
+# Environment and configuration
+python-dotenv==1.0.0
+
+# Security and CORS (for production)
+flask-cors==4.0.0
+
+# File handling
+python-multipart==0.0.6
