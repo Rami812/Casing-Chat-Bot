@@ -107,7 +107,7 @@ if 'pdf_uploaded' not in st.session_state:
 
 # Initialize the LLM for CrewAI agents
 def get_llm():
-    api_key = os.getenv("GOOGLE_API_KEY", st.secrets.get("GOOGLE_API_KEY", ""))
+    api_key = "AIzaSyDmLDKKNDS8J6J_lCIKG7VjXvMCw4vpUgs"
     if not api_key:
         st.error("❌ GOOGLE_API_KEY not found! Please set it in your environment variables or Streamlit secrets.")
         st.stop()
