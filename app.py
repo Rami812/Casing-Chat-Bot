@@ -17,7 +17,8 @@ import pickle
 import json
 from pdfminer.high_level import extract_text
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.embeddings import TensorflowHubEmbeddings
+from sentence_transformers import SentenceTransformer
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from crewai import Agent, Task, Crew, Process, LLM
 from crewai.tools import tool
@@ -107,7 +108,7 @@ if 'pdf_uploaded' not in st.session_state:
 
 # Initialize the LLM for CrewAI agents
 def get_llm():
-    api_key = "AIzaSyDmLDKKNDS8J6J_lCIKG7VjXvMCw4vpUgs"
+    api_key = os.getenv("GOOGLE_API_KEY", st.secrets.get("GOOGLE_API_KEY", ""))
     if not api_key:
         st.error("❌ GOOGLE_API_KEY not found! Please set it in your environment variables or Streamlit secrets.")
         st.stop()
@@ -451,8 +452,8 @@ def main():
                         # Create embeddings and knowledge base
                         try:
                             with st.spinner("Creating AI knowledge base..."):
-                                embeddings = TensorflowHubEmbeddings(
-                                    model_url="https://tfhub.dev/google/universal-sentence-encoder-multilingual/3"
+                                embeddings = HuggingFaceEmbeddings(
+                                    model_name="sentence-transformers/all-MiniLM-L6-v2"
                                 )
                                 knowledge_base = FAISS.from_texts(chunks, embeddings)
                                 st.success("✅ Knowledge base created successfully")
@@ -579,4 +580,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
